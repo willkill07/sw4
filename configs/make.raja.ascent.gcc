@@ -1,0 +1,26 @@
+proj = yes
+FC = mpif90 
+LINKER = mpicxx
+CXX = $(PREP) nvcc
+ckernel=yes 
+openmp=no
+raja_cuda=yes
+hdf5=yes
+
+SOFTWARE_HOME=/gpfs/wolf/gen138/proj-shared/eqsim
+RAJA_LOCATION = $(SOFTWARE_HOME)/RAJA-0.7.0/install
+PROJ_HOME = $(SOFTWARE_HOME)/proj-5.0.0/install
+UMPIRE_HOME = $(SOFTWARE_HOME)/umpire-0.3.5/install
+CALIPER_LOCATION = 
+CUDA_HOME = $(OLCF_CUDA_ROOT)
+HDF5_HOME = $(OLCF_HDF5_ROOT)
+
+EXTRA_FORT_FLAGS = 
+MORE_FLAGS = -DENABLE_MPI_TIMING_BARRIER=1 -DSW4_USE_UMPIRE=1 -DSW4_RAJA_VERSION=7 -DSW4_PINNED_MPI_BUFFERS=1 -DENABLE_FFTW=1 -DSW4_MASS_PREFETCH=1 -DUSE_DIRECT_INVERSE=1 -DUSE_HDF5=1 -I $(HDF5_HOME)/include -DSW4_NOOMP
+
+#LINKFLAGS =  -arch=sm_70
+EXTRA_CXX_FLAGS =  -O3  -use_fast_math -DDISABLE_PREFETCH  -ccbin mpicxx -std=c++11 --expt-extended-lambda -restrict -arch=sm_70 -I $(CUDA_HOME)/include -I$(RAJA_LOCATION)/include  -I$(CALIPER_LOCATION)/include --x cu -DUSE_NVTX -DRAJA_USE_CUDA -DSW4_CROUTINES -DRAJA_USE_RESTRICT_PTR -DCUDA_CODE -DENABLE_CUDA -dc -I$(PROJ_HOME)/include -I$(UMPIRE_HOME)/include $(MORE_FLAGS)
+
+EXTRA_CXX_FLAGS2 =  -O3  -use_fast_math -DDISABLE_PREFETCH -ccbin mpicxx -std=c++11 --expt-extended-lambda -restrict -arch=sm_70 -I $(CUDA_HOME)/include -I$(RAJA_LOCATION)/include  --x cu  -DUSE_NVTX -DRAJA_USE_CUDA -DSW4_CROUTINES -DRAJA_USE_RESTRICT_PTR -DCUDA_CODE -DENABLE_CUDA   -I$(UMPIRE_HOME)/include $(MORE_FLAGS)
+
+EXTRA_LINK_FLAGS = -O3  -dc -L $(OLCF_GCC_ROOT)/lib/ -L $(OLCF_NETLIB_LAPACK_ROOT)/lib64  -lgfortran -llapack -lblas  -L $(CUDA_HOME)/lib64 -lcudart -lnvToolsExt -lcuda -L $(RAJA_LOCATION)/lib -lRAJA  -lcudadevrt -L $(PROJ_HOME)/lib64 -lproj -L /usr/lib64/nvidia -lnvidia-ml -L$(UMPIRE_HOME)/lib -lumpire -L $(OLCF_FFTW_ROOT)/lib -lfftw3 -lfftw3_mpi -L $(HDF5_HOME)/lib -Wl,-rpath=$(HDF5_HOME)/lib -lhdf5_hl -lhdf5 -Wl,-rpath=$(PROJ_HOME)/lib64
