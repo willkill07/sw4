@@ -1,0 +1,34 @@
+-----------------------------------------------------------------------
+-
+-  For SW4 install and build instructions, see the document 
+-  "Installing SW4, version 2.0", which is included in doc/SW4-Installation.pdf
+-
+-----------------------------------------------------------------------
+
+For NERSC GPU Hackathon (Ascent)
+
+RAJA, Umpire, and Proj have been installed on Ascent already.
+
+1. git clone SW4 and checkout the raja branch
+   copy configs/make.raja.ascent.gcc to configs/make.inc
+   ml cmake cuda gcc fftw netlib-lapack hdf5
+   make -j 4
+   ** Sometimes parallel make will fail due to a race condition. Redoing make will fix this **
+
+
+Running SW4 on Ascent:
+-------------------------------
+1. Submit an interactive job
+   bsub -P GEN138 -nnodes 1 -W 30 -alloc_flags "gpumps" -Is /bin/bash
+
+2. Run sw4 with the test input file
+
+   Run with 6 MPI ranks, each with 1 GPU
+   jsrun -n6 -c1 -g1 -a1 -bpacked:1 ~/sw4/optimize/sw4 ~/sw4/pytest/reference/curvimeshrefine/gausshill-el-3.in 
+
+   May need to run it in a GPFS directory such as: /gpfs/wolf/gen138/proj-shared/eqsim/
+   Otherwise I got the following error when running in my $HOME directory
+     Error: **  The parent directory of the directory being created is on a read-only file system and cannot be modified.gausshill-el-3/
+
+
+   
