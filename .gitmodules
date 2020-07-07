@@ -1,3 +1,6 @@
 [submodule "blt"]
 	path = blt
 	url = https://github.com/LLNL/blt.git
+[submodule "caliper"]
+	path = caliper
+	url = https://github.com/LLNL/caliper.git
