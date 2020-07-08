@@ -201,7 +201,7 @@ void curvilinear4sgwind(
 // #pragma ivdep
 //           for (int i = ifirst + 2; i <= ilast - 2; i++) {
 #if defined(ENABLE_CUDA)
-#define NO_COLLAPSE 1
+      //#define NO_COLLAPSE 1
 #endif
 #ifdef PEEKS_GALORE
       SW4_PEEK;

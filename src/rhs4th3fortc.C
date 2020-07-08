@@ -1211,7 +1211,7 @@ void rhs4th3fortsgstr_ci(
     RAJA::RangeSegment i_range(ifirst + 2, ilast - 1);
     SW4_MARK_BEGIN("rhs4th3fortsgstr_ci::LOOP1");
 #ifdef ENABLE_CUDA
-#define NO_COLLAPSE 1
+    //#define NO_COLLAPSE 0
 #endif
 #if defined(NO_COLLAPSE)
 
@@ -2927,7 +2927,7 @@ void ve_bndry_stress_curvi_ci(
     RAJA::RangeSegment j_range(jfirst + 2, jlast - 1);
     SW4_MARK_END("HOST CODE");
 #ifdef ENABLE_CUDA
-#define NO_COLLAPSE 1
+    //#define NO_COLLAPSE 0
 #endif
 #ifdef NO_COLLAPSE
     Range<16> I(ifirst + 2, ilast - 1);
