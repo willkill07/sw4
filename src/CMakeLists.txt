@@ -125,3 +125,25 @@ set(FORTRAN_COMPUTE_FILES
     updatememvar.f
     velsum.f)
 
+blt_add_library(
+  NAME sw4_core
+  SOURCES ${CXX_BASE_FILES}
+  DEPENDS_ON sw4_meta_cxx
+)
+
+blt_add_library(
+  NAME sw4_core_fortran
+  SOURCES ${FORTRAN_COMPUTE_FILES} ${FORTRAN_BASE_FILES}
+  DEPENDS_ON sw4_meta
+)
+
+blt_add_library(
+  NAME sw4_kernels
+  SOURCES ${CXX_COMPUTE_FILES}
+  DEPENDS_ON sw4_meta_cxx cuda
+)
+
+blt_add_executable(
+  NAME sw4
+  DEPENDS_ON sw4_core sw4_core_fortran sw4_kernels
+)

@@ -132,19 +132,19 @@ void forall3(int start0, int end0, int start1, int end1, int start2, int end2,
              LoopBody &&body) {
   int tpb0 = 16;
   int tpb1 = 16;
-  int tpb2 = 1024 / (tpb0 * tpb1);
+  int tpb2 = 1024 / (tpb0 * tpb1); // 4
 
   int block0 = (end0 - start0) / tpb0;
-  block0 = ((end0 - start0) % tpb0 == 0) ? block0 : block0 + 1;
+  block0 = ((end0 - start0) % tpb0 == 0) ? block0 : block0 + 1; // ceil work % threads per block
   int block1 = (end1 - start1) / tpb1;
-  block1 = ((end1 - start1) % tpb1 == 0) ? block1 : block1 + 1;
+  block1 = ((end1 - start1) % tpb1 == 0) ? block1 : block1 + 1; // ceil work % threads per block
   int block2 = (end2 - start2) / tpb2;
-  block2 = ((end2 - start2) % tpb2 == 0) ? block2 : block2 + 1;
+  block2 = ((end2 - start2) % tpb2 == 0) ? block2 : block2 + 1; // ceil work % threads per block
 
   // std::cout << " BLOCKS " << block0 << " " << block1 << " " << block2 <<
   // "\n";
-  dim3 tpb(tpb0, tpb1, tpb2);
-  dim3 blocks(block0, block1, block2);
+  dim3 tpb(tpb0, tpb1, tpb2); // inner-dim
+  dim3 blocks(block0, block1, block2); // outer
 
   printf("Launching the kernel 3d \n");
   forall3kernel<<<blocks, tpb>>>(start0, end0, start1, end1, start2, end2,
