@@ -46,7 +46,7 @@ using DEFAULT_LOOP3 =
             RAJA::statement::Tile<2, RAJA::tile_fixed<4>, RAJA::cuda_block_z_loop,
               RAJA::statement::For<0, RAJA::cuda_thread_x_direct,
                 RAJA::statement::For<1, RAJA::cuda_thread_y_direct,
-                  RAJA::statement::For<2, RAJA::cuda_thread_x_direct,
+                  RAJA::statement::For<2, RAJA::cuda_thread_z_direct,
                     RAJA::statement::Lambda<0>>>>>>>>>;
 
 using SARRAY_LOOP_POL2 =
@@ -517,7 +517,8 @@ using CURV_POL_ORG =
                                  RAJA::statement::Lambda<0>>>>>>;
 using CURV_POL = DEFAULT_LOOP3;
 // in parallelStuff.C
-using BUFFER_POL = RAJA::KernelPolicy<RAJA::statement::CudaKernelAsync<
+using BUFFER_POL =
+  RAJA::KernelPolicy<RAJA::statement::CudaKernelAsync<
     RAJA::statement::For<1, RAJA::cuda_block_x_loop,
                          RAJA::statement::For<0, RAJA::cuda_thread_x_loop,
                                               RAJA::statement::Lambda<0>>>>>;
