@@ -1227,10 +1227,10 @@ void rhs4th3fortsgstr_ci(
 #endif
 #else
     RAJA::kernel<
-        XRHS_POL_ASYNC>(RAJA::make_tuple(k_range, j_range, i_range), [=] RAJA_DEVICE(
-                                                                         int k,
+        XRHS_POL_ASYNC>(RAJA::make_tuple(i_range, j_range, k_range), [=] RAJA_DEVICE(
+                                                                         int i,
                                                                          int j,
-                                                                         int i) {
+                                                                         int k) {
 #endif
       float_sw4 mux1, mux2, mux3, mux4, muy1, muy2, muy3, muy4, muz1, muz2,
           muz3, muz4;

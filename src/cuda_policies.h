@@ -24,6 +24,42 @@ typedef RAJA::cuda_exec<256, true> DPDMTFORT_LOOP_POL_ASYNC;
 
 typedef RAJA::cuda_exec<1024> SARRAY_LOOP_POL1;
 
+template <int BlockX, int BlockY, int BlockZ, int ThreadsPerBlock = BlockX * BlockY * BlockZ>
+using KernelPolicyBlockLoop =
+    RAJA::KernelPolicy<
+      RAJA::statement::CudaKernelFixed<ThreadsPerBlock, // product
+        RAJA::statement::Tile<0, RAJA::tile_fixed<BlockX>, RAJA::cuda_block_x_loop, // blockDim.x
+          RAJA::statement::Tile<1, RAJA::tile_fixed<BlockY>, RAJA::cuda_block_y_loop, // blockDim.y
+            RAJA::statement::Tile<2, RAJA::tile_fixed<BlockZ>, RAJA::cuda_block_z_loop, // blockDim.y
+              RAJA::statement::For<0, RAJA::cuda_thread_x_direct,
+                RAJA::statement::For<1, RAJA::cuda_thread_y_direct,
+                  RAJA::statement::For<2, RAJA::cuda_thread_z_direct,
+                    RAJA::statement::Lambda<0>>>>>>>>>;
+
+template <int BlockX, int BlockY, int BlockZ, int ThreadsPerBlock = BlockX * BlockY * BlockZ>
+using KernelPolicyThreadLoop =
+    RAJA::KernelPolicy<
+      RAJA::statement::CudaKernelFixed<ThreadsPerBlock, // product
+        RAJA::statement::Tile<0, RAJA::tile_fixed<BlockX>, RAJA::cuda_block_x_direct,
+          RAJA::statement::Tile<1, RAJA::tile_fixed<BlockY>, RAJA::cuda_block_y_direct,
+            RAJA::statement::Tile<2, RAJA::tile_fixed<BlockZ>, RAJA::cuda_block_z_direct,
+              RAJA::statement::For<0, RAJA::cuda_thread_x_loop,
+                RAJA::statement::For<1, RAJA::cuda_thread_y_loop,
+                  RAJA::statement::For<2, RAJA::cuda_thread_z_loop,
+                    RAJA::statement::Lambda<0>>>>>>>>>;
+
+// NERSC HACKATHON
+
+// can also try KernelPolicyThreadLoop
+
+// was 16, 4, 4
+using XRHS_POL_ASYNC = KernelPolicyBlockLoop<8, 4, 6 /* optional threads per block */>;
+using CURV_POL_LOOP_N1 = KernelPolicyBlockLoop<16, 4, 6>;
+
+using CURV_POL_LOOP_0 = KernelPolicyBlockLoop<16, 4, 4>;
+using CURV_POL_LOOP_1 = KernelPolicyBlockLoop<16, 4, 4>;
+using CURV_POL_LOOP_2 = KernelPolicyBlockLoop<16, 4, 4>;
+
 using DEFAULT_LOOP2X =
   RAJA::KernelPolicy<
     RAJA::statement::CudaKernel<
@@ -40,13 +76,13 @@ using DEFAULT_LOOP2X_ASYNC =
 
 using DEFAULT_LOOP3 =
     RAJA::KernelPolicy<
-      RAJA::statement::CudaKernelFixed<64,
-        RAJA::statement::Tile<0, RAJA::tile_fixed<4>, RAJA::cuda_block_x_direct,
-          RAJA::statement::Tile<1, RAJA::tile_fixed<4>, RAJA::cuda_block_y_direct,
-            RAJA::statement::Tile<2, RAJA::tile_fixed<4>, RAJA::cuda_block_z_direct,
-              RAJA::statement::For<0, RAJA::cuda_thread_x_loop,
-                RAJA::statement::For<1, RAJA::cuda_thread_y_loop,
-                  RAJA::statement::For<2, RAJA::cuda_thread_z_loop,
+      RAJA::statement::CudaKernelFixed<64, // product
+        RAJA::statement::Tile<0, RAJA::tile_fixed<4>, RAJA::cuda_block_x_loop, // blockDim.x
+          RAJA::statement::Tile<1, RAJA::tile_fixed<4>, RAJA::cuda_block_y_loop, // blockDim.y
+            RAJA::statement::Tile<2, RAJA::tile_fixed<4>, RAJA::cuda_block_z_loop, // blockDim.y
+              RAJA::statement::For<0, RAJA::cuda_thread_x_direct,
+                RAJA::statement::For<1, RAJA::cuda_thread_y_direct,
+                  RAJA::statement::For<2, RAJA::cuda_thread_z_direct,
                     RAJA::statement::Lambda<0>>>>>>>>>;
 
 using SARRAY_LOOP_POL2 =
@@ -67,6 +103,17 @@ using SARRAY_LOOP_POL2 =
 // 					      RAJA::statement::For<2,
 // RAJA::cuda_threadblock_exec<16 >,
 // RAJA::statement::Lambda<0> >>>>>;
+
+using RHS4_EXEC_POL =
+  RAJA::KernelPolicy<
+    RAJA::statement::CudaKernelFixed<384,
+      RAJA::statement::Tile<0, RAJA::tile_fixed<4>, RAJA::cuda_block_y_loop,
+        RAJA::statement::Tile<1, RAJA::tile_fixed<4>, RAJA::cuda_block_x_loop,
+          RAJA::statement::Tile<2, RAJA::tile_fixed<16>, RAJA::cuda_block_z_loop,
+            RAJA::statement::For<0, RAJA::cuda_thread_y_direct,
+              RAJA::statement::For<1, RAJA::cuda_thread_x_direct,
+                RAJA::statement::For<2, RAJA::cuda_thread_z_direct,
+                  RAJA::statement::Lambda<0>>>>>>>>>;
 
 using ICSTRESS_EXEC_POL =
     RAJA::KernelPolicy<
@@ -94,17 +141,6 @@ using ICSTRESS_EXEC_POL_ASYNC =
 // 					      RAJA::statement::For<2,
 // RAJA::cuda_threadblock_exec<16 >,
 // RAJA::statement::Lambda<0> >>>>>;
-
-using RHS4_EXEC_POL =
-    RAJA::KernelPolicy<
-      RAJA::statement::CudaKernelFixed<384,
-        RAJA::statement::Tile<0, RAJA::tile_fixed<4>, RAJA::cuda_block_y_loop,
-          RAJA::statement::Tile<1, RAJA::tile_fixed<4>, RAJA::cuda_block_x_loop,
-            RAJA::statement::Tile<2, RAJA::tile_fixed<16>, RAJA::cuda_block_z_loop,
-              RAJA::statement::For<0, RAJA::cuda_thread_y_direct,
-                RAJA::statement::For<1, RAJA::cuda_thread_x_direct,
-                  RAJA::statement::For<2, RAJA::cuda_thread_z_direct,
-                    RAJA::statement::Lambda<0>>>>>>>>>;
 
 using RHS4_EXEC_POL_ASYNC_OLDE =
     RAJA::KernelPolicy<
@@ -170,18 +206,6 @@ using XRHS_POL =
             1, RAJA::cuda_block_y_loop,
             RAJA::statement::For<2, RAJA::cuda_thread_x_loop,
                                  RAJA::statement::Lambda<0>>>>>>;
-
-// WKK -- important
-using XRHS_POL_ASYNC =
-  RAJA::KernelPolicy<
-    RAJA::statement::CudaKernelFixedAsync<64,
-      RAJA::statement::Tile<2, RAJA::tile_fixed<4>, RAJA::cuda_block_z_loop,
-        RAJA::statement::Tile<1, RAJA::tile_fixed<4>, RAJA::cuda_block_y_loop,
-          RAJA::statement::Tile<0, RAJA::tile_fixed<4>, RAJA::cuda_block_x_loop,
-            RAJA::statement::For<2, RAJA::cuda_thread_z_direct,
-              RAJA::statement::For<1, RAJA::cuda_thread_y_direct,
-                RAJA::statement::For<0, RAJA::cuda_thread_x_direct,
-                  RAJA::statement::Lambda<0>>>>>>>>>;
 
 using TWILIGHTSG_POL =
     RAJA::KernelPolicy<RAJA::statement::CudaKernel<RAJA::statement::Tile<
@@ -515,6 +539,7 @@ using CURV_POL_ORG =
             RAJA::statement::For<2, RAJA::cuda_thread_x_loop,
                                  RAJA::statement::Lambda<0>>>>>>;
 using CURV_POL = DEFAULT_LOOP3;
+
 // in parallelStuff.C
 using BUFFER_POL =
   RAJA::KernelPolicy<RAJA::statement::CudaKernelAsync<
