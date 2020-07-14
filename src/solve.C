@@ -773,6 +773,7 @@ void EW::solve(vector<Source*>& a_Sources, vector<TimeSeries*>& a_TimeSeries,
 #endif
   for (int currentTimeStep = beginCycle;
        currentTimeStep <= mNumberOfTimeSteps[event]; currentTimeStep++) {
+    SW4_MARK_BEGIN("time_step");
     time_measure[0] = MPI_Wtime();
     global_variables.firstCycle = currentTimeStep == beginCycle;
     if (currentTimeStep == mNumberOfTimeSteps[event]) t1 = SW4_CHRONO_NOW;
@@ -1263,6 +1264,7 @@ void EW::solve(vector<Source*>& a_Sources, vector<TimeSeries*>& a_TimeSeries,
       SW4_PEEK;
       SYNC_DEVICE;
     }
+    SW4_MARK_END("time_step");
   }  // end time stepping loop
   SW4_MARK_END("TIME_STEPPING");
   // cudaProfilerStop();
