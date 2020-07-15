@@ -156,7 +156,7 @@ void curvilinear4sg_ci(
         const float_sw4 istrx = 1 / (strx(i));
         const float_sw4 istrxy = istry * istrx;
 
-        const float_sw4 r1 = 0, r2 = 0, r3 = 0;
+        float_sw4 r1 = 0, r2 = 0, r3 = 0;
 
         // pp derivative (u) (u-eq)
         // 53 ops, tot=58
@@ -1874,7 +1874,7 @@ void curvilinear4sg_ci(
                                          u(2, i, j - 1, k - 2)) +
                                    c1 * (u(2, i, j - 1, k + 1) -
                                          u(2, i, j - 1, k - 1))))));
-      }
+			 
 
       // 4 ops, tot=2126
       lu(3, i, j, k) = a1 * lu(3, i, j, k) + sgn * r3 * ijac;
