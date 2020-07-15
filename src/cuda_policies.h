@@ -515,38 +515,38 @@ using ADDSGD_POL_SHMEM =
           RAJA::statement::Tile<2, RAJA::tile_fixed<SGD_BLOCK_Z>, RAJA::cuda_block_z_loop,
 
             /* **** initialize shared memory **** */
-            RAJA::statement::InitLocalMem<RAJA::cuda_shared_mem, RAJA::ParamList<3>>,
-            RAJA::statement::InitLocalMem<RAJA::cuda_shared_mem, RAJA::ParamList<4>>,
+            RAJA::statement::InitLocalMem<RAJA::cuda_shared_mem, RAJA::ParamList<3, 4>,
 
-            /* **** global memory -> shared memory **** */
-            /* ForICount used to acquire local tile index */
-            RAJA::statement::ForICount<0, RAJA::statement::Param<0>, RAJA::cuda_thread_x_direct,
-              RAJA::statement::ForICount<1, RAJA::statement::Param<1>, RAJA::cuda_thread_y_direct,
-                RAJA::statement::ForICount<2, RAJA::statement::Param<2>, RAJA::cuda_thread_z_direct,
-                  RAJA::statement::For<3, RAJA::seq_exec,
-                    RAJA::statement::Lambda<0>
+              /* **** global memory -> shared memory **** */
+              /* ForICount used to acquire local tile index */
+              RAJA::statement::ForICount<0, RAJA::statement::Param<0>, RAJA::cuda_thread_x_direct,
+                RAJA::statement::ForICount<1, RAJA::statement::Param<1>, RAJA::cuda_thread_y_direct,
+                  RAJA::statement::ForICount<2, RAJA::statement::Param<2>, RAJA::cuda_thread_z_direct,
+                    RAJA::statement::For<3, RAJA::seq_exec,
+                      RAJA::statement::Lambda<0>
+                    >,
                   >,
                 >,
               >,
-            >,
-
-            /* sync threads so shared memory is initialized */
-            RAJA::statement::CudaSyncThreads,
-
-            /* **** compute kernel **** */
-            /* ForICount used to acquire local tile index */
-            RAJA::statement::ForICount<0, RAJA::statement::Param<0>, RAJA::cuda_thread_x_direct,
-              RAJA::statement::ForICount<1, RAJA::statement::Param<1>, RAJA::cuda_thread_y_direct,
-                RAJA::statement::ForICount<2, RAJA::statement::Param<2>, RAJA::cuda_thread_z_direct,
-                  RAJA::statement::For<3, RAJA::seq_exec,
-                    RAJA::statement::Lambda<1>
+  
+              /* sync threads so shared memory is initialized */
+              RAJA::statement::CudaSyncThreads,
+  
+              /* **** compute kernel **** */
+              /* ForICount used to acquire local tile index */
+              RAJA::statement::ForICount<0, RAJA::statement::Param<0>, RAJA::cuda_thread_x_direct,
+                RAJA::statement::ForICount<1, RAJA::statement::Param<1>, RAJA::cuda_thread_y_direct,
+                  RAJA::statement::ForICount<2, RAJA::statement::Param<2>, RAJA::cuda_thread_z_direct,
+                    RAJA::statement::For<3, RAJA::seq_exec,
+                      RAJA::statement::Lambda<1>
+                    >,
                   >,
                 >,
               >,
+  
+              /* sync threads */
+              RAJA::statement::CudaSyncThreads
             >,
-
-            /* sync threads */
-            RAJA::statement::CudaSyncThreads,
           >,
         >,
       >,
