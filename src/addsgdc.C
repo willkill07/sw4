@@ -92,87 +92,103 @@ void EW::addsgd4_ci(
     RAJA::RangeSegment k_range(kfirst + 2, klast - 1);
     RAJA::RangeSegment c_range(0, 3);
 
-    RAJA::kernel<ADDSGD_POL_ASYNC>(
-        RAJA::make_tuple(c_range, k_range, j_range, i_range),
-        [=] RAJA_DEVICE(int c, int k, int j, int i) {
-          float_sw4 birho = beta / rho(i, j, k);
+    using SharedTile = ADDSGD_TILE;
+    SharedTile shm_um;
+    SharedTile shm_u;
+    
+    RAJA::kernel_param<ADDSGD_POL_SHMEM>(
+	RAJA::make_tuple(i_range, j_range, k_range, c_range),
+	RAJA::make_tuple((int)0 /* ti */, (int)0 /* tj */, (int)0 /* tk */, shm_um, shm_u),
+	// global memory -> shared memory
+	[=] RAJA_DEVICE(int i, int j, int k, int c, int ti, int tj, int tk, SharedTile& shm_um, SharedTile& shm_u) {
+	  shm_um(c, ti, tj, tk) = u(c, ti, tj, tk);
+	  shm_u(c, ti, tj, tk) = u(c, ti, tj, tk);
+	  if (ti < SGD_GHOST_CELLS * 2) {
+	    shm_um(c, ti + SGD_BLOCK_X, tj, tk) = u(c, ti + SGD_BLOCK_X, tj, tk);
+	    shm_u(c, ti + SGD_BLOCK_X, tj, tk) = u(c, ti + SGD_BLOCK_X, tj, tk);
+	  }
+	  if (tj < SGD_GHOST_CELLS * 2) {
+	    shm_um(c, ti, tj + SGD_BLOCK_Y, tk) = u(c, ti, tj + SGD_BLOCK_Y, tk);
+	    shm_u(c, ti, tj + SGD_BLOCK_Y, tk) = u(c, ti, tj + SGD_BLOCK_Y, tk);
+	  }
+	  if (tk < SGD_GHOST_CELLS * 2) {
+	    shm_um(c, ti, tj, tk + SGD_BLOCK_Z) = u(c, ti, tj, tk + SGD_BLOCK_Z);
+	    shm_u(c, ti, tj, tk + SGD_BLOCK_Z) = u(c, ti, tj, tk + SGD_BLOCK_Z);
+	  }
+	},
+	// compute
+        [=] RAJA_DEVICE(int i, int j, int k, int c, int ti, int tj, int tk, SharedTile& shm_um, SharedTile& shm_u) {
+	  // fix indexing of shared memory
+          ti += SGD_GHOST_CELLS;
+          tj += SGD_GHOST_CELLS;
+          tk += SGD_GHOST_CELLS;
+          
+          const float_sw4 birho = beta / rho(i, j, k);
           {
-            // Using the kernel below with an explict c loop and #pragma unroll
-            // The code takes 3X more time. WIthout the pragma unroll it takes
-            // the same amount of time as the kernel above. So reverting to
-            // original kernel.
-
-            // RAJA::kernel<ADDSGD_POL3_ASYNC>(
-            // 			    RAJA::make_tuple(k_range,j_range,i_range),
-            // 			    [=]RAJA_DEVICE (int k, int j,int i) {
-            // 			      float_sw4 birho=beta/rho(i,j,k);
-            // 			      //#pragma unroll
-            // 			      for(int c=0;c<3;c++)
-            // 				{
-            up(c, i, j, k) -=
+	    up(c, i, j, k) -=
                 birho *
                 (
                     // x-differences
                     strx(i) * coy(j) * coz(k) *
                         (rho(i + 1, j, k) * dcx(i + 1) *
-                             (u(c, i + 2, j, k) - 2 * u(c, i + 1, j, k) +
-                              u(c, i, j, k)) -
+                             (shm_u(c, ti + 2, tj, tk) - 2 * shm_u(c, ti + 1, tj, tk) +
+                              shm_u(c, ti, tj, tk)) -
                          2 * rho(i, j, k) * dcx(i) *
-                             (u(c, i + 1, j, k) - 2 * u(c, i, j, k) +
-                              u(c, i - 1, j, k)) +
+                             (shm_u(c, ti + 1, tj, tk) - 2 * shm_u(c, ti, tj, tk) +
+                              shm_u(c, ti - 1, tj, tk)) +
                          rho(i - 1, j, k) * dcx(i - 1) *
-                             (u(c, i, j, k) - 2 * u(c, i - 1, j, k) +
-                              u(c, i - 2, j, k)) -
+                             (shm_u(c, ti, tj, tk) - 2 * shm_u(c, ti - 1, tj, tk) +
+                              shm_u(c, i - 2, j, k)) -
                          rho(i + 1, j, k) * dcx(i + 1) *
-                             (um(c, i + 2, j, k) - 2 * um(c, i + 1, j, k) +
-                              um(c, i, j, k)) +
+                             (shm_um(c, ti + 2, tj, tk) - 2 * shm_um(c, ti + 1, tj, tk) +
+                              shm_um(c, ti, tj, tk)) +
                          2 * rho(i, j, k) * dcx(i) *
-                             (um(c, i + 1, j, k) - 2 * um(c, i, j, k) +
-                              um(c, i - 1, j, k)) -
+                             (shm_um(c, ti + 1, tj, tk) - 2 * shm_um(c, ti, tj, tk) +
+                              shm_um(c, ti - 1, tj, tk)) -
                          rho(i - 1, j, k) * dcx(i - 1) *
-                             (um(c, i, j, k) - 2 * um(c, i - 1, j, k) +
-                              um(c, i - 2, j, k))) +
+                             (shm_um(c, ti, tj, tk) - 2 * shm_um(c, ti - 1, tj, tk) +
+                              shm_um(c, ti - 2, tj, tk))) +
                     // y-differences
                     stry(j) * cox(i) * coz(k) *
-                        (+rho(i, j + 1, k) * dcy(j + 1) *
-                             (u(c, i, j + 2, k) - 2 * u(c, i, j + 1, k) +
-                              u(c, i, j, k)) -
+                        (rho(i, j + 1, k) * dcy(j + 1) *
+                             (shm_u(c, ti, tj + 2, tk) - 2 * shm_u(c, ti, tj + 1, tk) +
+                              shm_u(c, ti, tj, tk)) -
                          2 * rho(i, j, k) * dcy(j) *
-                             (u(c, i, j + 1, k) - 2 * u(c, i, j, k) +
-                              u(c, i, j - 1, k)) +
+                             (shm_u(c, ti, tj + 1, tk) - 2 * shm_u(c, ti, tj, tk) +
+                              shm_u(c, ti, tj - 1, tk)) +
                          rho(i, j - 1, k) * dcy(j - 1) *
-                             (u(c, i, j, k) - 2 * u(c, i, j - 1, k) +
-                              u(c, i, j - 2, k)) -
+                             (shm_u(c, ti, tj, tk) - 2 * shm_u(c, ti, tj - 1, tk) +
+                              shm_u(c, ti, tj - 2, tk)) -
                          rho(i, j + 1, k) * dcy(j + 1) *
-                             (um(c, i, j + 2, k) - 2 * um(c, i, j + 1, k) +
-                              um(c, i, j, k)) +
+                             (shm_um(c, ti, tj + 2, tk) - 2 * shm_um(c, ti, tj + 1, tk) +
+                              shm_um(c, ti, tj, tk)) +
                          2 * rho(i, j, k) * dcy(j) *
-                             (um(c, i, j + 1, k) - 2 * um(c, i, j, k) +
-                              um(c, i, j - 1, k)) -
+                             (shm_um(c, ti, tj + 1, tk) - 2 * shm_um(c, ti, tj, tk) +
+                              shm_um(c, ti, tj - 1, tk)) -
                          rho(i, j - 1, k) * dcy(j - 1) *
-                             (um(c, i, j, k) - 2 * um(c, i, j - 1, k) +
-                              um(c, i, j - 2, k))) +
+                             (shm_um(c, ti, tj, tk) - 2 * shm_um(c, ti, tj - 1, tk) +
+                              shm_um(c, ti, tj - 2, tk))) +
                     strz(k) * cox(i) * coy(j) *
                         (
                             // z-differences
-                            +rho(i, j, k + 1) * dcz(k + 1) *
-                                (u(c, i, j, k + 2) - 2 * u(c, i, j, k + 1) +
-                                 u(c, i, j, k)) -
-                            2 * rho(i, j, k) * dcz(k) *
-                                (u(c, i, j, k + 1) - 2 * u(c, i, j, k) +
-                                 u(c, i, j, k - 1)) +
-                            rho(i, j, k - 1) * dcz(k - 1) *
-                                (u(c, i, j, k) - 2 * u(c, i, j, k - 1) +
-                                 u(c, i, j, k - 2)) -
                             rho(i, j, k + 1) * dcz(k + 1) *
-                                (um(c, i, j, k + 2) - 2 * um(c, i, j, k + 1) +
-                                 um(c, i, j, k)) +
+                                (shm_u(c, ti, tj, tk + 2) - 2 * shm_u(c, ti, tj, tk + 1) +
+                                 shm_u(c, ti, tj, tk)) -
                             2 * rho(i, j, k) * dcz(k) *
-                                (um(c, i, j, k + 1) - 2 * um(c, i, j, k) +
-                                 um(c, i, j, k - 1)) -
+                                (shm_u(c, ti, tj, tk + 1) - 2 * shm_u(c, ti, tj, tk) +
+                                 shm_u(c, ti, tj, tk - 1)) +
                             rho(i, j, k - 1) * dcz(k - 1) *
-                                (um(c, i, j, k) - 2 * um(c, i, j, k - 1) +
-                                 um(c, i, j, k - 2))));
+                                (shm_u(c, ti, tj, tk) - 2 * shm_u(c, ti, tj, tk - 1) +
+                                 shm_u(c, ti, tj, tk - 2)) -
+                            rho(i, j, k + 1) * dcz(k + 1) *
+                                (shm_um(c, ti, tj, tk + 2) - 2 * shm_um(c, ti, tj, tk + 1) +
+                                 shm_um(c, ti, tj, tk)) +
+                            2 * rho(i, j, k) * dcz(k) *
+                                (shm_um(c, ti, tj, tk + 1) - 2 * shm_um(c, ti, tj, tk) +
+                                 shm_um(c, ti, tj, tk - 1)) -
+                            rho(i, j, k - 1) * dcz(k - 1) *
+                                (shm_um(c, ti, tj, tk) - 2 * shm_um(c, ti, tj, tk - 1) +
+                                 shm_um(c, ti, tj, tk - 2))));
           }
         });  // SYNC_STREAM;
 //   }

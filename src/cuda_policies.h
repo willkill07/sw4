@@ -53,7 +53,7 @@ using KernelPolicyThreadLoop =
 // can also try KernelPolicyThreadLoop
 
 // was 16, 4, 4
-using XRHS_POL_ASYNC = KernelPolicyBlockLoop<8, 4, 6 /* optional threads per block */>;
+using XRHS_POL_ASYNC = KernelPolicyBlockLoop<16, 4, 4>;
 using CURV_POL_LOOP_N1 = KernelPolicyBlockLoop<16, 4, 6>;
 
 using CURV_POL_LOOP_0 = KernelPolicyBlockLoop<16, 4, 4>;
@@ -485,6 +485,73 @@ using ADDSGD_POL_ASYNC =
                             RAJA::statement::For<2, RAJA::cuda_thread_z_direct,
                                 RAJA::statement::For<0, RAJA::seq_exec,
                                     RAJA::statement::Lambda<0>>>>>>>>>>;
+
+
+constexpr int SGD_BLOCK_X = 4;
+constexpr int SGD_BLOCK_Y = 4;
+constexpr int SGD_BLOCK_Z = 4;
+constexpr int SGD_THREADS_PER_BLOCK = SGD_BLOCK_X * SGD_BLOCK_Y * SGD_BLOCK_Z; 
+constexpr int SGD_GHOST_CELLS = 2;
+
+using ADDSGD_TILE =
+  RAJA::LocalArray<
+    float_sw4, 
+    RAJA::Perm<3, 2, 1, 0>,
+    RAJA::SizeList<
+      SGD_BLOCK_X + 2 * SGD_GHOST_CELLS,
+      SGD_BLOCK_Y + 2 * SGD_GHOST_CELLS,
+      SGD_BLOCK_Z + 2 * SGD_GHOST_CELLS,
+      4
+    >
+  >;
+
+using ADDSGD_POL_SHMEM =
+  RAJA::KernelPolicy<
+    RAJA::statement::CudaKernelFixed<SGD_THREADS_PER_BLOCK,
+
+      /* 3-D tile of block dims */
+      RAJA::statement::Tile<0, RAJA::tile_fixed<SGD_BLOCK_X>, RAJA::cuda_block_x_loop,
+        RAJA::statement::Tile<1, RAJA::tile_fixed<SGD_BLOCK_Y>, RAJA::cuda_block_y_loop,
+          RAJA::statement::Tile<2, RAJA::tile_fixed<SGD_BLOCK_Z>, RAJA::cuda_block_z_loop,
+
+            /* **** initialize shared memory **** */
+            RAJA::statement::InitLocalMem<RAJA::cuda_shared_mem, RAJA::ParamList<3>>,
+            RAJA::statement::InitLocalMem<RAJA::cuda_shared_mem, RAJA::ParamList<4>>,
+
+            /* **** global memory -> shared memory **** */
+            /* ForICount used to acquire local tile index */
+            RAJA::statement::ForICount<0, RAJA::statement::Param<0>, RAJA::cuda_thread_x_direct,
+              RAJA::statement::ForICount<1, RAJA::statement::Param<1>, RAJA::cuda_thread_y_direct,
+                RAJA::statement::ForICount<2, RAJA::statement::Param<2>, RAJA::cuda_thread_z_direct,
+                  RAJA::statement::For<3, RAJA::seq_exec,
+                    RAJA::statement::Lambda<0>
+                  >,
+                >,
+              >,
+            >,
+
+            /* sync threads so shared memory is initialized */
+            RAJA::statement::CudaSyncThreads,
+
+            /* **** compute kernel **** */
+            /* ForICount used to acquire local tile index */
+            RAJA::statement::ForICount<0, RAJA::statement::Param<0>, RAJA::cuda_thread_x_direct,
+              RAJA::statement::ForICount<1, RAJA::statement::Param<1>, RAJA::cuda_thread_y_direct,
+                RAJA::statement::ForICount<2, RAJA::statement::Param<2>, RAJA::cuda_thread_z_direct,
+                  RAJA::statement::For<3, RAJA::seq_exec,
+                    RAJA::statement::Lambda<1>
+                  >,
+                >,
+              >,
+            >,
+
+            /* sync threads */
+            RAJA::statement::CudaSyncThreads,
+          >,
+        >,
+      >,
+    >,
+  >;
 
 using ADDSGD_POL2_ASYNC =
     RAJA::KernelPolicy<RAJA::statement::CudaKernelFixedAsync<
