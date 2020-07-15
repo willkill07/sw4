@@ -101,19 +101,19 @@ void EW::addsgd4_ci(
 	RAJA::make_tuple((int)0 /* ti */, (int)0 /* tj */, (int)0 /* tk */, shm_um, shm_u),
 	// global memory -> shared memory
 	[=] RAJA_DEVICE(int i, int j, int k, int c, int ti, int tj, int tk, SharedTile& shm_um, SharedTile& shm_u) {
-	  shm_um(c, ti, tj, tk) = u(c, ti, tj, tk);
-	  shm_u(c, ti, tj, tk) = u(c, ti, tj, tk);
+	  shm_um(c, ti, tj, tk) = um(c, i, j, k);
+	  shm_u (c, ti, tj, tk) =  u(c, i, j, k);
 	  if (ti < SGD_GHOST_CELLS * 2) {
-	    shm_um(c, ti + SGD_BLOCK_X, tj, tk) = u(c, ti + SGD_BLOCK_X, tj, tk);
-	    shm_u(c, ti + SGD_BLOCK_X, tj, tk) = u(c, ti + SGD_BLOCK_X, tj, tk);
+	    shm_um(c, ti + SGD_BLOCK_X, tj, tk) = um(c, i + SGD_BLOCK_X, j, k);
+	    shm_u (c, ti + SGD_BLOCK_X, tj, tk) =  u(c, i + SGD_BLOCK_X, j, k);
 	  }
 	  if (tj < SGD_GHOST_CELLS * 2) {
-	    shm_um(c, ti, tj + SGD_BLOCK_Y, tk) = u(c, ti, tj + SGD_BLOCK_Y, tk);
-	    shm_u(c, ti, tj + SGD_BLOCK_Y, tk) = u(c, ti, tj + SGD_BLOCK_Y, tk);
+	    shm_um(c, ti, tj + SGD_BLOCK_Y, tk) = um(c, i, j + SGD_BLOCK_Y, k);
+	    shm_u (c, ti, tj + SGD_BLOCK_Y, tk) =  u(c, i, j + SGD_BLOCK_Y, k);
 	  }
 	  if (tk < SGD_GHOST_CELLS * 2) {
-	    shm_um(c, ti, tj, tk + SGD_BLOCK_Z) = u(c, ti, tj, tk + SGD_BLOCK_Z);
-	    shm_u(c, ti, tj, tk + SGD_BLOCK_Z) = u(c, ti, tj, tk + SGD_BLOCK_Z);
+	    shm_um(c, ti, tj, tk + SGD_BLOCK_Z) = um(c, i, j, k + SGD_BLOCK_Z);
+	    shm_u (c, ti, tj, tk + SGD_BLOCK_Z) =  u(c, i, j, k + SGD_BLOCK_Z);
 	  }
 	},
 	// compute
@@ -138,7 +138,7 @@ void EW::addsgd4_ci(
                               shm_u(c, ti - 1, tj, tk)) +
                          rho(i - 1, j, k) * dcx(i - 1) *
                              (shm_u(c, ti, tj, tk) - 2 * shm_u(c, ti - 1, tj, tk) +
-                              shm_u(c, i - 2, j, k)) -
+                              shm_u(c, ti - 2, tj, tk)) -
                          rho(i + 1, j, k) * dcx(i + 1) *
                              (shm_um(c, ti + 2, tj, tk) - 2 * shm_um(c, ti + 1, tj, tk) +
                               shm_um(c, ti, tj, tk)) +
