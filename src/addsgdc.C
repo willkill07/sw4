@@ -96,43 +96,12 @@ void EW::addsgd4_ci(
     SharedTile shm_um;
     SharedTile shm_u;
     
-    const double MY_PI = 3.141592;
-
-    
-    
     RAJA::kernel_param<ADDSGD_POL_SHMEM>(
 	RAJA::make_tuple(i_range, j_range, k_range, c_range),
 	RAJA::make_tuple((int)0 /* ti */, (int)0 /* tj */, (int)0 /* tk */, shm_um, shm_u),
 	// global memory -> shared memory
 	[=] RAJA_DEVICE(int i, int j, int k, int c, int ti, int tj, int tk, SharedTile& shm_um, SharedTile& shm_u) {
-          if (i > ilast || j > jlast || k > klast) {
-            printf("BOUNDS CHECK BAD\n");
-          }
-	  if (ti < SGD_GHOST_CELLS) {
-	    // lower ghost
-	    shm_um(c, ti, tj, tk) = um(c, i - SGD_GHOST_CELLS, j, k);
-	    shm_u (c, ti, tj, tk) =  u(c, i - SGD_GHOST_CELLS, j, k);
-	    // upper ghost
-	    shm_um(c, ti + SGD_BLOCK_X + SGD_GHOST_CELLS, tj, tk) = um(c, i + SGD_BLOCK_X, j, k);
-	    shm_u (c, ti + SGD_BLOCK_X + SGD_GHOST_CELLS, tj, tk) =  u(c, i + SGD_BLOCK_X, j, k);
-	  }
-	  if (tj < SGD_GHOST_CELLS) {
-	    // lower ghost
-	    shm_um(c, ti, tj, tk) = um(c, i, j - SGD_GHOST_CELLS, k);
-	    shm_u (c, ti, tj, tk) =  u(c, i, j - SGD_GHOST_CELLS, k);
-	    // upper ghost
-	    shm_um(c, ti, tj + SGD_BLOCK_Y + SGD_GHOST_CELLS, tk) = um(c, i, j + SGD_BLOCK_Y, k);
-	    shm_u (c, ti, tj + SGD_BLOCK_Y + SGD_GHOST_CELLS, tk) =  u(c, i, j + SGD_BLOCK_Y, k);
-	  }
-	  if (tk < SGD_GHOST_CELLS) {
-	    // lower ghost
-	    shm_um(c, ti, tj, tk) = um(c, i, j, k - SGD_GHOST_CELLS);
-	    shm_u (c, ti, tj, tk) =  u(c, i, j, k - SGD_GHOST_CELLS);
-	    // upper ghost
-	    shm_um(c, ti, tj, tk + SGD_BLOCK_Z + SGD_GHOST_CELLS) = um(c, i, j, k + SGD_BLOCK_Z);
-	    shm_u (c, ti, tj, tk + SGD_BLOCK_Z + SGD_GHOST_CELLS) =  u(c, i, j, k + SGD_BLOCK_Z);
-	  }
-	  
+          
 	  ti += SGD_GHOST_CELLS;
 	  tj += SGD_GHOST_CELLS;
 	  tk += SGD_GHOST_CELLS;
@@ -140,13 +109,34 @@ void EW::addsgd4_ci(
 	  shm_um(c, ti, tj, tk) = um(c, i, j, k);
 	  shm_u (c, ti, tj, tk) =  u(c, i, j, k);
 	  
+          if (ti < SGD_GHOST_CELLS * 2) {
+	    // lower ghost
+	    shm_um(c, ti - SGD_GHOST_CELLS, tj, tk) = um(c, i - SGD_GHOST_CELLS, j, k);
+	    shm_u (c, ti - SGD_GHOST_CELLS, tj, tk) =  u(c, i - SGD_GHOST_CELLS, j, k);
+	    // upper ghost
+	    shm_um(c, ti + SGD_BLOCK_X, tj, tk) = um(c, i + SGD_BLOCK_X, j, k);
+	    shm_u (c, ti + SGD_BLOCK_X, tj, tk) =  u(c, i + SGD_BLOCK_X, j, k);
+	  }
+	  if (tj < SGD_GHOST_CELLS * 2) {
+	    // lower ghost
+	    shm_um(c, ti, tj - SGD_GHOST_CELLS, tk) = um(c, i, j - SGD_GHOST_CELLS, k);
+	    shm_u (c, ti, tj - SGD_GHOST_CELLS, tk) =  u(c, i, j - SGD_GHOST_CELLS, k);
+	    // upper ghost
+	    shm_um(c, ti, tj + SGD_BLOCK_Y, tk) = um(c, i, j + SGD_BLOCK_Y, k);
+	    shm_u (c, ti, tj + SGD_BLOCK_Y, tk) =  u(c, i, j + SGD_BLOCK_Y, k);
+	  }
+	  if (tk < SGD_GHOST_CELLS * 2) {
+	    // lower ghost
+	    shm_um(c, ti, tj, tk - SGD_GHOST_CELLS) = um(c, i, j, k - SGD_GHOST_CELLS);
+	    shm_u (c, ti, tj, tk - SGD_GHOST_CELLS) =  u(c, i, j, k - SGD_GHOST_CELLS);
+	    // upper ghost
+	    shm_um(c, ti, tj, tk + SGD_BLOCK_Z) = um(c, i, j, k + SGD_BLOCK_Z);
+	    shm_u (c, ti, tj, tk + SGD_BLOCK_Z) =  u(c, i, j, k + SGD_BLOCK_Z);
+	  }
 	},
 	// compute
         [=] RAJA_DEVICE(int i, int j, int k, int c, int ti, int tj, int tk, SharedTile& shm_um, SharedTile& shm_u) {
-	  if (i > ilast || j > jlast || k > klast) {
-            printf("BOUNDS CHECK ALSO BAD\n");
-          }
-
+	  
 	  // fix indexing of shared memory
           ti += SGD_GHOST_CELLS;
           tj += SGD_GHOST_CELLS;
