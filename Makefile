@@ -34,7 +34,7 @@ endif
 
 ifeq ($(optlevel),DEBUG)
    FFLAGS    = -g -O2
-   CXXFLAGS  = -g -I../src -DBZ_DEBUG
+   CXXFLAGS  = -g -I../src
    CFLAGS    = -g
 else
    FFLAGS   = -O2

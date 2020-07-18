@@ -493,15 +493,20 @@ constexpr int SGD_BLOCK_Z = 4;
 constexpr int SGD_THREADS_PER_BLOCK = SGD_BLOCK_X * SGD_BLOCK_Y * SGD_BLOCK_Z; 
 constexpr int SGD_GHOST_CELLS = 2;
 
+constexpr int SGD_TILE_ARRAY_I = SGD_BLOCK_X + 2 * SGD_GHOST_CELLS;
+constexpr int SGD_TILE_ARRAY_J = SGD_BLOCK_Y + 2 * SGD_GHOST_CELLS;
+constexpr int SGD_TILE_ARRAY_K = SGD_BLOCK_Z + 2 * SGD_GHOST_CELLS;
+constexpr int SGD_TILE_ARRAY_C = 4;
+
 using ADDSGD_TILE =
   RAJA::LocalArray<
-    float_sw4, 
+    double, 
     RAJA::Perm<3, 2, 1, 0>,
     RAJA::SizeList<
-      SGD_BLOCK_X + 2 * SGD_GHOST_CELLS,
-      SGD_BLOCK_Y + 2 * SGD_GHOST_CELLS,
-      SGD_BLOCK_Z + 2 * SGD_GHOST_CELLS,
-      4
+      SGD_TILE_ARRAY_C,
+      SGD_TILE_ARRAY_I,
+      SGD_TILE_ARRAY_J,
+      SGD_TILE_ARRAY_K
     >
   >;
 
